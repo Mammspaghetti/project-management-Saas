@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TaskFlow — Guide du projet</title>
+<style>
+  :root {
+    --bg:#f7f8fa; --surface:#fff; --text:#1d2430; --muted:#667085; --border:#dfe3ea;
+    --accent:#3b5bdb; --accent-soft:#e8edff; --code-bg:#f1f3f7; --warn:#b54708; --warn-bg:#fff4e5;
+    --ok:#067647; --ok-bg:#e7f6ee;
+    --c-domain:#fde8c8; --c-app:#d7efe0; --c-infra:#dbe6ff; --c-web:#f3dcf5;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:#12161c; --surface:#1b212a; --text:#e6e9ef; --muted:#9aa4b5; --border:#2c3543;
+      --accent:#8ea2ff; --accent-soft:#232c4a; --code-bg:#232a35; --warn:#ffb866; --warn-bg:#3a2c18;
+      --ok:#6ee0a4; --ok-bg:#16332a;
+      --c-domain:#4a3a1c; --c-app:#1e3a2b; --c-infra:#1f2f57; --c-web:#43264a;
+    }
+  }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; }
+  body { margin:0; background:var(--bg); color:var(--text); line-height:1.65;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  .layout { display:grid; grid-template-columns:260px minmax(0,1fr); max-width:1280px; margin:0 auto; }
+  nav { position:sticky; top:0; height:100vh; overflow:auto; padding:1.5rem 1rem; border-right:1px solid var(--border); }
+  nav .brand { font-weight:700; font-size:1.15rem; margin-bottom:1rem; display:block; color:var(--text); text-decoration:none; }
+  nav a { display:block; padding:.3rem .6rem; border-radius:6px; color:var(--muted); text-decoration:none; font-size:.92rem; }
+  nav a:hover { background:var(--accent-soft); color:var(--accent); }
+  nav .sub { padding-left:1.4rem; font-size:.85rem; }
+  main { padding:2rem 2.5rem 5rem; min-width:0; }
+  h1 { font-size:2.1rem; margin:0 0 .3rem; }
+  h2 { font-size:1.5rem; margin:3rem 0 .8rem; padding-top:1rem; border-top:1px solid var(--border); }
+  h3 { font-size:1.15rem; margin:1.8rem 0 .5rem; }
+  p, li { max-width:75ch; }
+  .lead { color:var(--muted); font-size:1.1rem; }
+  code { background:var(--code-bg); padding:.1em .35em; border-radius:4px; font-size:.9em;
+    font-family:ui-monospace,SFMono-Regular,Consolas,monospace; }
+  pre { background:var(--code-bg); border:1px solid var(--border); border-radius:8px; padding:1rem; overflow:auto; font-size:.85rem; line-height:1.5; }
+  pre code { background:none; padding:0; }
+  table { border-collapse:collapse; width:100%; margin:1rem 0; background:var(--surface); font-size:.93rem; }
+  th, td { border:1px solid var(--border); padding:.5rem .7rem; text-align:left; vertical-align:top; }
+  th { background:var(--code-bg); }
+  .callout { border-left:4px solid var(--accent); background:var(--accent-soft); padding:.8rem 1rem; border-radius:0 8px 8px 0; margin:1.2rem 0; max-width:75ch; }
+  .callout.warn { border-color:var(--warn); background:var(--warn-bg); }
+  .callout.ok { border-color:var(--ok); background:var(--ok-bg); }
+  .callout strong:first-child { display:block; margin-bottom:.15rem; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1rem; margin:1rem 0; }
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1rem; }
+  .card h4 { margin:0 0 .3rem; }
+  .tag { display:inline-block; font-size:.75rem; padding:.05rem .5rem; border-radius:99px; border:1px solid var(--border); color:var(--muted); }
+  figure { margin:1.5rem 0; background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:1rem; overflow:auto; }
+  figcaption { color:var(--muted); font-size:.85rem; margin-top:.5rem; }
+  svg text { fill:var(--text); font-family:system-ui,sans-serif; font-size:13px; }
+  svg .muted { fill:var(--muted); font-size:11.5px; }
+  svg .box { stroke:var(--border); stroke-width:1.5; }
+  svg .line { stroke:var(--muted); stroke-width:1.6; fill:none; }
+  svg marker path { fill:var(--muted); }
+  svg .dep { stroke:var(--accent); stroke-width:2; fill:none; }
+  .d { background:var(--c-domain); } .a { background:var(--c-app); } .i { background:var(--c-infra); } .w { background:var(--c-web); }
+  .chip { padding:.05rem .45rem; border-radius:5px; font-size:.82rem; font-weight:600; color:var(--text); }
+  @media (max-width: 860px) {
+    .layout { grid-template-columns:1fr; }
+    nav { position:static; height:auto; border-right:none; border-bottom:1px solid var(--border); }
+    main { padding:1.5rem 1rem 4rem; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav>
+  <a class="brand" href="#top">TaskFlow</a>
+  <a href="#vue">1. Vue d'ensemble</a>
+  <a href="#runtime">2. Comment tout s'assemble</a>
+  <a href="#clean">3. L'architecture (Clean)</a>
+  <a class="sub" href="#clean-layers">Les 4 couches</a>
+  <a class="sub" href="#clean-flow">Parcours d'une requête</a>
+  <a class="sub" href="#clean-archunit">Règle vérifiée (ArchUnit)</a>
+  <a href="#spring">4. Spring Boot</a>
+  <a class="sub" href="#spring-basics">Les notions de base</a>
+  <a class="sub" href="#spring-tree">Structure du code</a>
+  <a class="sub" href="#spring-config">Configuration</a>
+  <a class="sub" href="#spring-security">Sécurité & JWT</a>
+  <a class="sub" href="#spring-data">Données : JPA & Flyway</a>
+  <a class="sub" href="#spring-web">API, validation, erreurs</a>
+  <a href="#rbac">5. Rôles (RBAC)</a>
+  <a href="#docker">6. Docker</a>
+  <a class="sub" href="#docker-concepts">Les concepts</a>
+  <a class="sub" href="#docker-backend">Dockerfile backend</a>
+  <a class="sub" href="#docker-front">Dockerfile frontend</a>
+  <a class="sub" href="#docker-compose">docker-compose.yml</a>
+  <a class="sub" href="#docker-cmd">Commandes</a>
+  <a href="#front">7. Frontend React</a>
+  <a href="#tests">8. Tests & CI/CD</a>
+  <a href="#lancer">9. Lancer le projet</a>
+  <a href="#bugs">10. Bugs rencontrés</a>
+  <a href="#glossaire">11. Glossaire</a>
+</nav>
+
+<main id="top">
+
+<h1>TaskFlow — Guide du projet</h1>
+<p class="lead">Un outil de gestion de projets et de tâches multi-utilisateurs : ce document explique comment il est construit, comment fonctionnent Spring Boot et Docker ici, et pourquoi l'architecture est organisée ainsi.</p>
+
+<!-- ============================================================ -->
+<h2 id="vue">1. Vue d'ensemble</h2>
+
+<p><strong>Ce que fait l'application :</strong> des utilisateurs s'inscrivent, créent des <em>projets</em>, y invitent d'autres personnes avec un <em>rôle</em> (propriétaire, membre, lecteur) et gèrent des <em>tâches</em> dans un tableau kanban (À faire → En cours → Terminé).</p>
+
+<div class="cards">
+  <div class="card"><h4>Frontend</h4><span class="tag">React · TypeScript · Vite</span><p>L'interface que voit l'utilisateur, dans le navigateur. Elle ne contient aucune donnée : elle appelle l'API.</p></div>
+  <div class="card"><h4>Backend</h4><span class="tag">Java 21 · Spring Boot</span><p>L'API REST : elle applique les règles métier, vérifie qui a le droit de faire quoi, lit et écrit en base.</p></div>
+  <div class="card"><h4>Base de données</h4><span class="tag">MySQL 8.4 · Flyway</span><p>Stocke utilisateurs, projets, membres, tâches. Le schéma est versionné par des scripts SQL.</p></div>
+  <div class="card"><h4>Docker</h4><span class="tag">Compose</span><p>Emballe les trois éléments ci-dessus pour les lancer ensemble avec une seule commande.</p></div>
+</div>
+
+<h3>Arborescence du dépôt</h3>
+<pre><code>project-management-Saas/
+├── backend/            API Spring Boot (pom.xml, Dockerfile, src/)
+├── frontend/           Application React (package.json, Dockerfile, nginx.conf, src/)
+├── docs/               Documentation (Markdown) + ce guide HTML
+├── .github/workflows/  CI : tests et build automatiques sur GitHub
+├── docker-compose.yml  Lance db + backend + frontend ensemble
+└── .env                Mots de passe et secrets locaux (ignoré par Git)</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="runtime">2. Comment tout s'assemble</h2>
+
+<p>Quand tu lances <code>docker compose up</code>, trois <strong>conteneurs</strong> démarrent et communiquent entre eux :</p>
+
+<figure>
+<svg viewBox="0 0 860 250" width="100%" role="img" aria-label="Navigateur vers nginx, vers Spring Boot, vers MySQL">
+  <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z"/></marker></defs>
+  <rect class="box" x="10" y="85" width="140" height="70" rx="10" fill="var(--surface)"/>
+  <text x="80" y="115" text-anchor="middle" font-weight="700">Navigateur</text>
+  <text class="muted" x="80" y="135" text-anchor="middle">localhost:8081</text>
+
+  <rect class="box" x="215" y="30" width="190" height="190" rx="12" fill="var(--c-web)"/>
+  <text x="310" y="52" text-anchor="middle" font-weight="700">Conteneur frontend</text>
+  <rect class="box" x="235" y="70" width="150" height="55" rx="8" fill="var(--surface)"/>
+  <text x="310" y="94" text-anchor="middle">nginx</text>
+  <text class="muted" x="310" y="111" text-anchor="middle">sert la SPA React</text>
+  <text class="muted" x="310" y="150" text-anchor="middle">relaie /api/* vers</text>
+  <text class="muted" x="310" y="166" text-anchor="middle">le backend</text>
+
+  <rect class="box" x="470" y="30" width="190" height="190" rx="12" fill="var(--c-app)"/>
+  <text x="565" y="52" text-anchor="middle" font-weight="700">Conteneur backend</text>
+  <rect class="box" x="490" y="70" width="150" height="55" rx="8" fill="var(--surface)"/>
+  <text x="565" y="94" text-anchor="middle">Spring Boot</text>
+  <text class="muted" x="565" y="111" text-anchor="middle">API REST :8080</text>
+  <text class="muted" x="565" y="150" text-anchor="middle">règles métier,</text>
+  <text class="muted" x="565" y="166" text-anchor="middle">sécurité JWT</text>
+
+  <rect class="box" x="725" y="60" width="125" height="130" rx="12" fill="var(--c-infra)"/>
+  <text x="787" y="88" text-anchor="middle" font-weight="700">Conteneur db</text>
+  <rect class="box" x="740" y="105" width="95" height="50" rx="8" fill="var(--surface)"/>
+  <text x="787" y="127" text-anchor="middle">MySQL</text>
+  <text class="muted" x="787" y="143" text-anchor="middle">:3306</text>
+
+  <path class="line" d="M150 120 H213" marker-end="url(#ar)"/>
+  <path class="line" d="M405 120 H468" marker-end="url(#ar)"/>
+  <path class="line" d="M660 120 H723" marker-end="url(#ar)"/>
+  <text class="muted" x="182" y="110" text-anchor="middle">HTTP</text>
+  <text class="muted" x="437" y="110" text-anchor="middle">/api</text>
+  <text class="muted" x="692" y="110" text-anchor="middle">JDBC</text>
+</svg>
+<figcaption>Avec Docker Compose. Le navigateur ne parle qu'à nginx (une seule origine, donc pas de problème CORS). Les conteneurs se trouvent par leur nom de service : <code>db</code>, <code>backend</code>.</figcaption>
+</figure>
+
+<p>En développement sans Docker, le serveur de Vite (<code>npm run dev</code>, port 5173) joue le rôle de nginx : il redirige <code>/api</code> vers <code>localhost:8080</code>.</p>
+
+<!-- ============================================================ -->
+<h2 id="clean">3. L'architecture : Clean Architecture</h2>
+
+<p>L'idée centrale : <strong>le code métier ne doit dépendre de rien de technique</strong> (ni Spring, ni la base de données, ni HTTP). C'est la technique qui dépend du métier, jamais l'inverse. Ainsi le métier reste simple, testable seul, et on peut changer de base ou de framework sans le réécrire.</p>
+
+<h3 id="clean-layers">Les 4 couches</h3>
+
+<figure>
+<svg viewBox="0 0 860 330" width="100%" role="img" aria-label="Les couches et le sens des dépendances">
+  <defs><marker id="ab" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--accent)"/></marker></defs>
+  <rect class="box" x="20" y="20" width="250" height="75" rx="10" fill="var(--c-web)"/>
+  <text x="145" y="46" text-anchor="middle" font-weight="700">web</text>
+  <text class="muted" x="145" y="66" text-anchor="middle">contrôleurs REST, DTO</text>
+  <text class="muted" x="145" y="82" text-anchor="middle">erreurs HTTP</text>
+
+  <rect class="box" x="590" y="20" width="250" height="75" rx="10" fill="var(--c-infra)"/>
+  <text x="715" y="46" text-anchor="middle" font-weight="700">infrastructure</text>
+  <text class="muted" x="715" y="66" text-anchor="middle">JPA/MySQL, JWT, BCrypt</text>
+  <text class="muted" x="715" y="82" text-anchor="middle">configuration Spring</text>
+
+  <rect class="box" x="305" y="125" width="250" height="75" rx="10" fill="var(--c-app)"/>
+  <text x="430" y="151" text-anchor="middle" font-weight="700">application</text>
+  <text class="muted" x="430" y="171" text-anchor="middle">cas d'usage, droits par projet</text>
+  <text class="muted" x="430" y="187" text-anchor="middle">AuthService, ProjectService, TaskService</text>
+
+  <rect class="box" x="305" y="235" width="250" height="75" rx="10" fill="var(--c-domain)"/>
+  <text x="430" y="261" text-anchor="middle" font-weight="700">domain</text>
+  <text class="muted" x="430" y="281" text-anchor="middle">User, Project, Task, rôles</text>
+  <text class="muted" x="430" y="297" text-anchor="middle">règles métier, interfaces Repository</text>
+
+  <path class="dep" d="M200 95 L360 125" marker-end="url(#ab)"/>
+  <path class="dep" d="M660 95 L500 125" marker-end="url(#ab)"/>
+  <path class="dep" d="M430 200 V233" marker-end="url(#ab)"/>
+  <path class="dep" d="M715 95 V270 H557" marker-end="url(#ab)"/>
+  <text class="muted" x="440" y="222">dépend de</text>
+</svg>
+<figcaption>Les flèches indiquent « dépend de ». Tout converge vers <code>domain</code>, qui ne dépend de rien.</figcaption>
+</figure>
+
+<table>
+<tr><th>Couche</th><th>Contient</th><th>Exemple dans le code</th></tr>
+<tr><td><span class="chip d">domain</span></td><td>Les objets métier et leurs règles. Java pur, sans annotation de framework. Définit aussi des <strong>interfaces</strong> (« ports ») que d'autres devront implémenter.</td>
+  <td><code>Project.addMember()</code> refuse un second propriétaire. <code>TaskRepository</code> est une interface : « sauvegarder une tâche », sans dire comment.</td></tr>
+<tr><td><span class="chip a">application</span></td><td>Les <strong>cas d'usage</strong> : ce que l'application sait faire (créer un projet, assigner une tâche…) et qui a le droit de le faire.</td>
+  <td><code>TaskService.create()</code> vérifie le rôle via <code>ProjectAccess</code>, puis appelle <code>TaskRepository.save()</code>.</td></tr>
+<tr><td><span class="chip i">infrastructure</span></td><td>Les <strong>implémentations techniques</strong> des interfaces : base de données, hachage de mot de passe, JWT, configuration.</td>
+  <td><code>TaskRepositoryAdapter</code> implémente <code>TaskRepository</code> avec JPA. <code>JwtTokenIssuer</code> fabrique les tokens.</td></tr>
+<tr><td><span class="chip w">web</span></td><td>L'interface HTTP : reçoit les requêtes JSON, les valide, appelle un cas d'usage, renvoie la réponse.</td>
+  <td><code>TaskController</code> expose <code>POST /api/v1/projects/{id}/tasks</code>.</td></tr>
+</table>
+
+<div class="callout">
+  <strong>Pourquoi des « interfaces » dans le domaine ?</strong>
+  Le cas d'usage a besoin de sauvegarder une tâche, mais ne doit pas connaître MySQL. Il appelle donc l'interface <code>TaskRepository</code> (définie dans <code>domain</code>). Au démarrage, Spring branche l'implémentation JPA située dans <code>infrastructure</code>. On parle d'<em>inversion de dépendance</em>. Dans les tests, on peut brancher à la place un faux dépôt en mémoire.
+</div>
+
+<h3>Deux modèles pour la même chose : pourquoi ?</h3>
+<p>Une tâche existe sous trois formes, volontairement :</p>
+<ul>
+  <li><code>Task</code> (domain) : l'objet métier, sans framework ;</li>
+  <li><code>TaskJpaEntity</code> (infrastructure) : la même chose avec les annotations JPA pour la table <code>tasks</code> ;</li>
+  <li><code>TaskResponse</code> (web) : ce qu'on renvoie en JSON au client.</li>
+</ul>
+<p>Cela évite qu'un changement de base ou d'API ne casse le métier, au prix d'un peu de code de conversion.</p>
+
+<h3 id="clean-flow">Parcours d'une requête : créer une tâche</h3>
+<ol>
+  <li>Le navigateur envoie <code>POST /api/v1/projects/1/tasks</code> avec l'en-tête <code>Authorization: Bearer &lt;jwt&gt;</code>.</li>
+  <li><strong>Spring Security</strong> vérifie la signature et l'expiration du token. Sinon : <code>401</code>.</li>
+  <li><strong><code>TaskController</code></strong> (web) valide le JSON (titre non vide, longueur max…). Sinon : <code>400</code>. Il transforme le token en un <code>Actor</code> (id + rôle global).</li>
+  <li><strong><code>TaskService.create()</code></strong> (application) demande à <code>ProjectAccess</code> si l'acteur peut écrire dans ce projet. Non-membre : <code>404</code>. Lecteur : <code>403</code>.</li>
+  <li>Le service crée l'objet <code>Task</code> (domain) puis appelle <code>TaskRepository.save()</code>.</li>
+  <li><strong><code>TaskRepositoryAdapter</code></strong> (infrastructure) convertit en entité JPA et l'écrit dans MySQL.</li>
+  <li>La réponse remonte : <code>201 Created</code> avec la tâche en JSON.</li>
+</ol>
+
+<h3 id="clean-archunit">Règle vérifiée automatiquement : ArchUnit</h3>
+<p>Une règle d'architecture non vérifiée finit toujours par être violée. Le test <code>ArchitectureTest</code> <strong>fait échouer le build</strong> si quelqu'un, par exemple, importe Spring dans <code>domain</code> ou appelle <code>infrastructure</code> depuis <code>web</code> :</p>
+<pre><code>noClasses().that().resideInAPackage("com.taskflow.domain..")
+    .should().dependOnClassesThat().resideInAnyPackage(
+        "com.taskflow.application..", "com.taskflow.infrastructure..", "com.taskflow.web..",
+        "org.springframework..", "jakarta..", "com.fasterxml..");</code></pre>
+
+<div class="callout warn">
+  <strong>Compromis assumés</strong>
+  <code>@Transactional</code> (Spring) est utilisé dans <code>application</code> pour gérer les transactions : seule exception à la pureté, explicitement autorisée. Les contrôleurs appellent directement les classes de service, sans interface « input port » intermédiaire : c'est un choix de simplicité à cette taille.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="spring">4. Spring Boot : comment le backend est fait</h2>
+
+<h3 id="spring-basics">Les notions de base</h3>
+<table>
+<tr><th>Notion</th><th>Explication</th></tr>
+<tr><td>Spring Boot</td><td>Un framework Java qui démarre une application web complète (serveur Tomcat embarqué inclus) avec très peu de configuration. Le point d'entrée est <code>TaskFlowApplication</code> et son <code>main</code>.</td></tr>
+<tr><td>Starters</td><td>Dans <code>pom.xml</code>, des dépendances « tout-en-un » : <code>starter-web</code> (API REST), <code>starter-data-jpa</code> (base de données), <code>starter-security</code>, <code>starter-validation</code>, <code>starter-actuator</code> (santé)…</td></tr>
+<tr><td>Bean</td><td>Un objet créé et géré par Spring. Spring en crée un seul exemplaire et le donne à qui en a besoin.</td></tr>
+<tr><td>Injection de dépendances</td><td>Une classe déclare dans son constructeur ce dont elle a besoin ; Spring le fournit. Ex. : <code>TaskController(TaskService tasks)</code>. On ne fait jamais <code>new TaskService()</code> à la main.</td></tr>
+<tr><td>Annotations</td><td>Des étiquettes qui disent à Spring quoi faire : <code>@RestController</code> (cette classe expose des URL), <code>@Configuration</code> + <code>@Bean</code> (fabrique d'objets), <code>@Entity</code> (table SQL), <code>@Transactional</code> (tout ou rien en base)…</td></tr>
+<tr><td>Maven</td><td>L'outil de build. <code>pom.xml</code> liste les dépendances. <code>mvnw</code> est un « wrapper » qui télécharge la bonne version de Maven tout seul.</td></tr>
+</table>
+
+<h3 id="spring-tree">Structure du code</h3>
+<pre><code>backend/src/main/java/com/taskflow/
+├── TaskFlowApplication.java          point d'entrée
+├── domain/
+│   ├── model/        User, Project, Task, GlobalRole, ProjectRole, TaskStatus, TaskPriority
+│   ├── exception/    NotFound / Forbidden / Conflict / Unauthorized
+│   └── repository/   UserRepository, ProjectRepository, TaskRepository  (interfaces)
+├── application/
+│   ├── auth/         AuthService        (inscription, connexion)
+│   ├── project/      ProjectService     (projets, membres)
+│   ├── task/         TaskService        (tâches)
+│   ├── common/       Actor, ProjectAccess (contrôle des droits)
+│   └── port/         PasswordHasher, TokenIssuer (interfaces techniques)
+├── infrastructure/
+│   ├── persistence/  entités JPA + adaptateurs des Repository
+│   ├── security/     SecurityConfig, JwtTokenIssuer, BCryptPasswordHasher
+│   └── config/       UseCaseConfig (assemblage), AdminBootstrap
+└── web/
+    ├── auth/ project/ task/ admin/   contrôleurs + DTO
+    └── error/        GlobalExceptionHandler
+
+backend/src/main/resources/
+├── application.yml                   configuration
+└── db/migration/V1__init_schema.sql  schéma de la base (Flyway)</code></pre>
+
+<h3>Le « câblage » : UseCaseConfig</h3>
+<p>Les classes de <code>application</code> n'ont aucune annotation Spring. C'est <code>UseCaseConfig</code> qui les instancie et leur fournit leurs dépendances :</p>
+<pre><code>@Configuration
+class UseCaseConfig {
+    @Bean
+    TaskService taskService(TaskRepository tasks, ProjectAccess access) {
+        return new TaskService(tasks, access);   // Spring fournit l'implémentation JPA de TaskRepository
+    }
+}</code></pre>
+
+<h3 id="spring-config">Configuration : application.yml</h3>
+<pre><code>spring.datasource.url: ${DB_URL:jdbc:mysql://localhost:3306/taskflow...}
+spring.datasource.username: ${DB_USER:taskflow}
+spring.datasource.password: ${DB_PASSWORD:taskflow}
+app.security.jwt.secret: ${JWT_SECRET:dev-only-secret...}</code></pre>
+<p>La syntaxe <code>${NOM:valeur}</code> signifie : « utilise la variable d'environnement <code>NOM</code>, sinon cette valeur par défaut ». C'est ainsi que Docker Compose injecte les vrais mots de passe sans qu'ils soient écrits dans le code.</p>
+
+<h3 id="spring-security">Sécurité et JWT</h3>
+<p><strong>Un JWT</strong> (JSON Web Token) est un jeton signé que le serveur remet après connexion. Il contient l'identifiant de l'utilisateur, son rôle global et une date d'expiration. Le client le renvoie à chaque requête ; le serveur vérifie la signature, sans avoir à consulter une base de sessions : on dit que l'API est <em>sans état</em> (stateless).</p>
+
+<figure>
+<svg viewBox="0 0 860 230" width="100%" role="img" aria-label="Flux de connexion JWT">
+  <defs><marker id="ac" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" style="fill:var(--muted)"/></marker></defs>
+  <text x="90" y="25" text-anchor="middle" font-weight="700">Client</text>
+  <text x="430" y="25" text-anchor="middle" font-weight="700">Backend</text>
+  <text x="770" y="25" text-anchor="middle" font-weight="700">MySQL</text>
+  <path class="line" d="M90 35 V215" stroke-dasharray="4 4"/><path class="line" d="M430 35 V215" stroke-dasharray="4 4"/><path class="line" d="M770 35 V215" stroke-dasharray="4 4"/>
+  <path class="line" d="M90 60 H428" marker-end="url(#ac)"/><text class="muted" x="260" y="54" text-anchor="middle">1. POST /auth/login (email + mot de passe)</text>
+  <path class="line" d="M430 90 H768" marker-end="url(#ac)"/><text class="muted" x="600" y="84" text-anchor="middle">2. cherche l'utilisateur</text>
+  <text class="muted" x="440" y="115">3. compare avec le hash BCrypt, fabrique le JWT</text>
+  <path class="line" d="M428 140 H92" marker-end="url(#ac)"/><text class="muted" x="260" y="134" text-anchor="middle">4. { accessToken: "eyJ..." }</text>
+  <path class="line" d="M90 175 H428" marker-end="url(#ac)"/><text class="muted" x="260" y="169" text-anchor="middle">5. GET /projects + Authorization: Bearer eyJ...</text>
+  <text class="muted" x="440" y="200">6. vérifie la signature + l'expiration, puis traite</text>
+</svg>
+<figcaption>Les mots de passe ne sont jamais stockés en clair : seulement leur empreinte BCrypt.</figcaption>
+</figure>
+
+<ul>
+  <li><code>SecurityConfig</code> déclare quelles URL sont publiques (<code>/auth/login</code>, <code>/auth/register</code>, santé, Swagger) et lesquelles exigent un token.</li>
+  <li>Spring Security valide le JWT grâce au module <em>oauth2-resource-server</em> (bibliothèque Nimbus) : aucune dépendance JWT supplémentaire.</li>
+  <li>Le secret de signature vient de <code>JWT_SECRET</code> (32 caractères minimum, vérifié au démarrage).</li>
+  <li>Le CSRF est désactivé : sans cookie de session, cette protection n'a pas de sens ici.</li>
+</ul>
+
+<h3 id="spring-data">Données : JPA et Flyway</h3>
+<ul>
+  <li><strong>JPA / Hibernate</strong> fait le lien entre objets Java et tables SQL. Une classe annotée <code>@Entity</code> correspond à une table.</li>
+  <li><strong>Spring Data</strong> génère le code des requêtes à partir d'interfaces : <code>findByEmail(String email)</code> devient automatiquement <code>SELECT … WHERE email = ?</code>.</li>
+  <li><strong>Flyway</strong> exécute au démarrage les scripts de <code>db/migration</code> dans l'ordre (<code>V1__…</code>, <code>V2__…</code>) et se souvient de ceux déjà appliqués. Hibernate est en mode <code>validate</code> : il vérifie que les entités correspondent aux tables mais ne les modifie jamais.</li>
+</ul>
+<div class="callout warn"><strong>Règle d'or</strong>Ne jamais modifier une migration déjà appliquée : ajouter un nouveau fichier <code>V2__description.sql</code>.</div>
+
+<table>
+<tr><th>Table</th><th>Rôle</th></tr>
+<tr><td><code>users</code></td><td>Comptes : email unique, hash du mot de passe, nom, rôle global</td></tr>
+<tr><td><code>projects</code></td><td>Projets, avec leur propriétaire</td></tr>
+<tr><td><code>project_members</code></td><td>Qui appartient à quel projet, avec quel rôle (clé primaire = projet + utilisateur)</td></tr>
+<tr><td><code>tasks</code></td><td>Tâches : statut, priorité, assigné (optionnel), échéance (optionnelle)</td></tr>
+</table>
+
+<h3 id="spring-web">API, validation et erreurs</h3>
+<ul>
+  <li><strong>Endpoints</strong> sous <code>/api/v1</code> (le <code>v1</code> permet de faire évoluer l'API sans casser les anciens clients). Liste complète dans <code>docs/api.md</code> ou en direct sur <code>/swagger-ui.html</code>.</li>
+  <li><strong>Validation</strong> : les DTO portent des règles (<code>@NotBlank</code>, <code>@Email</code>, <code>@Size</code>). Une requête invalide est rejetée avant d'atteindre la logique métier.</li>
+  <li><strong>Erreurs</strong> : <code>GlobalExceptionHandler</code> transforme les exceptions métier en réponses JSON normalisées (RFC 7807). Exemple : <code>NotFoundException</code> devient <code>404</code>, <code>ConflictException</code> devient <code>409</code>.</li>
+</ul>
+<pre><code>{ "title": "Bad Request", "status": 400, "detail": "Validation failed",
+  "errors": { "email": "must be a well-formed email address" } }</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="rbac">5. Rôles et permissions (RBAC)</h2>
+<p>RBAC = <em>Role-Based Access Control</em> : on n'accorde pas des droits à chaque personne, mais à des <strong>rôles</strong>. Il y a deux niveaux :</p>
+<ul>
+  <li><strong>Rôle global</strong> : <code>USER</code> (par défaut) ou <code>ADMIN</code> (voit tout, accède à l'espace admin). Il est porté par le JWT.</li>
+  <li><strong>Rôle par projet</strong> : <code>OWNER</code>, <code>MEMBER</code> ou <code>VIEWER</code>. Il est lu en base à chaque requête.</li>
+</ul>
+<table>
+<tr><th>Action</th><th>VIEWER</th><th>MEMBER</th><th>OWNER</th><th>ADMIN</th></tr>
+<tr><td>Lire projet, membres, tâches</td><td>✅</td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td>Créer / modifier / supprimer des tâches</td><td>❌</td><td>✅</td><td>✅</td><td>✅</td></tr>
+<tr><td>Modifier ou supprimer le projet, gérer les membres</td><td>❌</td><td>❌</td><td>✅</td><td>✅</td></tr>
+<tr><td>Lister tous les utilisateurs</td><td>❌</td><td>❌</td><td>❌</td><td>✅</td></tr>
+</table>
+<div class="callout">
+  <strong>Détail de sécurité : 404 plutôt que 403</strong>
+  Si tu n'es pas membre d'un projet, l'API répond <code>404</code> (introuvable) et non <code>403</code> (interdit) : on ne révèle pas qu'un projet existe. Tu reçois <code>403</code> seulement si tu es membre mais sans droit suffisant.
+</div>
+<p>Les droits sont vérifiés <strong>côté serveur</strong>, dans <code>ProjectAccess</code>. Le frontend masque certains boutons, mais ce n'est que du confort : la vraie barrière est l'API.</p>
+
+<!-- ============================================================ -->
+<h2 id="docker">6. Docker : comment ça marche ici</h2>
+
+<h3 id="docker-concepts">Les concepts</h3>
+<table>
+<tr><th>Terme</th><th>Explication</th></tr>
+<tr><td>Image</td><td>Un « modèle » figé contenant un programme et tout ce qu'il faut pour tourner (système minimal, Java, tes fichiers…). Se construit à partir d'un <code>Dockerfile</code>.</td></tr>
+<tr><td>Conteneur</td><td>Une image en cours d'exécution : un mini-environnement isolé. Tu peux en lancer plusieurs à partir d'une même image.</td></tr>
+<tr><td>Dockerfile</td><td>La recette pour fabriquer une image, étape par étape.</td></tr>
+<tr><td>Docker Compose</td><td>Un fichier (<code>docker-compose.yml</code>) qui décrit plusieurs conteneurs et comment ils s'articulent, pour tout lancer d'une commande.</td></tr>
+<tr><td>Volume</td><td>Un espace de stockage qui survit à la suppression du conteneur. Sans lui, la base MySQL serait vidée à chaque arrêt.</td></tr>
+<tr><td>Réseau</td><td>Compose crée un réseau privé où les conteneurs se joignent par le nom du service (<code>db</code>, <code>backend</code>).</td></tr>
+<tr><td>Port</td><td><code>"8081:80"</code> signifie : le port 80 du conteneur est accessible sur le port 8081 de ton PC.</td></tr>
+</table>
+
+<h3 id="docker-backend">Dockerfile du backend (build en 2 étapes)</h3>
+<pre><code># Étape 1 : COMPILER (image lourde avec Maven + JDK)
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /workspace
+COPY pom.xml .
+RUN mvn dependency:go-offline          # télécharge les dépendances (mis en cache)
+COPY src ./src
+RUN mvn -DskipTests package            # produit target/taskflow-backend-*.jar
+
+# Étape 2 : EXÉCUTER (image légère avec seulement le JRE)
+FROM eclipse-temurin:21-jre
+RUN useradd --system --uid 1001 app    # utilisateur non-root, par sécurité
+COPY --from=build /workspace/target/*.jar app.jar
+USER app
+ENTRYPOINT ["java", "-jar", "app.jar"]</code></pre>
+<p><strong>Pourquoi 2 étapes ?</strong> L'image finale ne garde que le <code>.jar</code> et le JRE : elle est bien plus petite et ne contient ni code source ni Maven. Copier <code>pom.xml</code> avant <code>src</code> permet à Docker de réutiliser le cache des dépendances tant que le <code>pom.xml</code> ne change pas : les reconstructions sont plus rapides.</p>
+
+<h3 id="docker-front">Dockerfile du frontend</h3>
+<pre><code>FROM node:22-alpine AS build           # étape 1 : compiler React
+RUN npm ci && npm run build            #   produit le dossier dist/ (fichiers statiques)
+
+FROM nginx:1.27-alpine                 # étape 2 : servir
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html</code></pre>
+<p>Même principe : Node sert à compiler, puis seul le résultat statique est copié dans nginx. <code>nginx.conf</code> fait deux choses : renvoyer <code>index.html</code> pour toutes les pages (nécessaire pour une SPA), et relayer <code>/api/</code> vers <code>http://backend:8080</code>.</p>
+
+<h3 id="docker-compose">docker-compose.yml</h3>
+<pre><code>services:
+  db:                                  # MySQL
+    image: mysql:8.4
+    environment: { MYSQL_ROOT_PASSWORD, MYSQL_USER, MYSQL_PASSWORD, ... }   # lus dans .env
+    volumes: [ db-data:/var/lib/mysql ]            # données conservées
+    healthcheck: ...                               # "db est prête" quand mysqladmin répond
+
+  backend:
+    build: ./backend                               # construit via backend/Dockerfile
+    depends_on: { db: { condition: service_healthy } }   # attend que MySQL soit prête
+    environment:
+      DB_URL: jdbc:mysql://db:3306/taskflow...     # "db" = nom du service MySQL
+      JWT_SECRET, ADMIN_EMAIL, ...                 # lus dans .env
+    ports: ["8080:8080"]
+
+  frontend:
+    build: ./frontend
+    depends_on: [backend]
+    ports: ["8081:80"]</code></pre>
+<ul>
+  <li>Les variables <code>${...}</code> viennent du fichier <code>.env</code> à la racine. <code>.env</code> est ignoré par Git : c'est là que vivent les secrets.</li>
+  <li>Le <code>healthcheck</code> évite que le backend démarre avant que MySQL soit prête (ce qui le ferait planter).</li>
+  <li>Le backend joint la base avec l'adresse <code>db</code>, pas <code>localhost</code> : dans un conteneur, <code>localhost</code> désigne le conteneur lui-même.</li>
+</ul>
+
+<h3 id="docker-cmd">Commandes utiles</h3>
+<table>
+<tr><th>Commande</th><th>Effet</th></tr>
+<tr><td><code>docker compose up --build</code></td><td>Construit les images et démarre tout</td></tr>
+<tr><td><code>docker compose up -d db</code></td><td>Démarre seulement MySQL, en arrière-plan</td></tr>
+<tr><td><code>docker compose ps</code></td><td>État des conteneurs</td></tr>
+<tr><td><code>docker compose logs -f backend</code></td><td>Suit les logs du backend</td></tr>
+<tr><td><code>docker compose down</code></td><td>Arrête et supprime les conteneurs (les données restent)</td></tr>
+<tr><td><code>docker compose down -v</code></td><td>Idem <strong>et efface la base</strong> (repart de zéro)</td></tr>
+</table>
+<div class="callout warn">
+  <strong>Piège classique</strong>
+  Après une modification du code, il faut <code>--build</code>, sinon Docker réutilise l'ancienne image. De même, MySQL ne lit <code>MYSQL_PASSWORD</code> qu'à la création du volume : si tu changes le mot de passe dans <code>.env</code> après coup, fais <code>docker compose down -v</code>.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="front">7. Frontend React</h2>
+<pre><code>frontend/src/
+├── app/App.tsx                 routes + providers
+├── features/
+│   ├── auth/                   connexion/inscription, AuthContext, ProtectedRoute
+│   ├── projects/               liste des projets, tableau kanban, appels API
+│   └── admin/                  page réservée aux admins
+└── shared/
+    ├── api/http.ts, types.ts   client HTTP et types des DTO
+    └── ui/Layout.tsx           barre de navigation</code></pre>
+<ul>
+  <li><strong>Organisation par fonctionnalité</strong> : tout ce qui concerne les projets est dans <code>features/projects</code>.</li>
+  <li><strong><code>http.ts</code></strong> : un petit client qui ajoute le token à chaque requête, transforme les erreurs de l'API en <code>ApiError</code> et déconnecte l'utilisateur si le serveur répond <code>401</code> (token expiré).</li>
+  <li><strong>AuthContext</strong> : garde l'utilisateur connecté (le token est conservé dans <code>localStorage</code>).</li>
+  <li><strong>ProtectedRoute</strong> : redirige vers <code>/login</code> si on n'est pas connecté, et protège les pages admin.</li>
+  <li><strong>TanStack Query</strong> : charge les données du serveur, les met en cache et les rafraîchit après chaque modification (ex. ajout d'une tâche).</li>
+  <li><strong>TypeScript</strong> : les types dans <code>types.ts</code> reprennent ceux de l'API, ce qui évite de se tromper de nom de champ.</li>
+</ul>
+
+<!-- ============================================================ -->
+<h2 id="tests">8. Tests et CI/CD</h2>
+<table>
+<tr><th>Test</th><th>Ce qu'il vérifie</th><th>Nécessite</th></tr>
+<tr><td><code>ArchitectureTest</code></td><td>Les règles de dépendance entre couches</td><td>—</td></tr>
+<tr><td><code>TaskServiceRbacTest</code></td><td>Les droits : lecteur, membre, propriétaire, non-membre, admin</td><td>—</td></tr>
+<tr><td><code>ProjectDomainTest</code></td><td>Règles métier du projet (un seul propriétaire…)</td><td>—</td></tr>
+<tr><td><code>ApiIntegrationTest</code></td><td>L'application entière contre un vrai MySQL : inscription, connexion, droits, validation</td><td>Docker</td></tr>
+<tr><td>Vitest (frontend)</td><td>Routes protégées, client HTTP</td><td>—</td></tr>
+</table>
+<p><strong>Testcontainers</strong> démarre un MySQL jetable dans Docker pendant le test, puis le supprime : on teste avec le vrai moteur de production plutôt qu'une base simulée.</p>
+
+<p><strong>CI/CD (GitHub Actions)</strong> : à chaque <em>push</em> ou <em>pull request</em>, <code>.github/workflows/ci.yml</code> exécute automatiquement :</p>
+<ol>
+  <li>le backend : <code>mvnw verify</code> (tests unitaires, ArchUnit, intégration) ;</li>
+  <li>le frontend : lint, tests, build ;</li>
+  <li>si tout passe, la construction des deux images Docker (sans les publier).</li>
+</ol>
+<p>Cela garantit que le code sur <code>main</code> compile et passe les tests. Étape suivante possible : publier les images sur un registre et déployer.</p>
+
+<!-- ============================================================ -->
+<h2 id="lancer">9. Lancer le projet</h2>
+<h3>Option A : tout avec Docker (recommandé pour tester)</h3>
+<pre><code>cp .env.example .env          # puis mets tes propres mots de passe dans .env
+docker compose up --build
+# Application : http://localhost:8081      API : http://localhost:8080
+# Swagger     : http://localhost:8080/swagger-ui.html</code></pre>
+<h3>Option B : développement (backend et frontend séparés)</h3>
+<pre><code>docker compose up -d db                  # MySQL seul
+
+cd backend
+$env:DB_USER="taskflow"; $env:DB_PASSWORD="&lt;MYSQL_PASSWORD&gt;"      # PowerShell
+.\mvnw.cmd spring-boot:run               # API sur :8080
+
+cd frontend
+npm install
+npm run dev                              # interface sur :5173</code></pre>
+
+<!-- ============================================================ -->
+<h2 id="bugs">10. Bugs rencontrés au premier lancement</h2>
+<p>Deux erreurs de démarrage réelles, utiles pour comprendre Spring :</p>
+
+<div class="card">
+  <h4>1. « required a bean of type UserJpaRepository that could not be found »</h4>
+  <p><strong>Cause :</strong> les interfaces Spring Data étaient déclarées <em>à l'intérieur</em> d'une autre classe. Spring Data ignore par défaut les interfaces imbriquées.</p>
+  <p><strong>Correction :</strong> <code>@EnableJpaRepositories(considerNestedRepositories = true)</code> dans <code>PersistenceConfig</code>.</p>
+</div>
+<div class="card" style="margin-top:1rem">
+  <h4>2. « required a single bean, but 2 were found : corsConfigurationSource / mvcHandlerMappingIntrospector »</h4>
+  <p><strong>Cause :</strong> deux beans du même type existaient et Spring ne savait pas lequel injecter dans <code>filterChain</code>.</p>
+  <p><strong>Correction :</strong> ne plus injecter le bean ; <code>.cors(Customizer.withDefaults())</code> utilise automatiquement celui nommé <code>corsConfigurationSource</code>.</p>
+</div>
+<div class="callout ok">
+  <strong>À retenir</strong>
+  Ces deux erreurs auraient été détectées par <code>ApiIntegrationTest</code>, qui démarre toute l'application. Ce test était ignoré faute de Docker disponible pour Maven. Lire le bloc <code>APPLICATION FAILED TO START</code> du log, et surtout les lignes <code>Description</code> et <code>Action</code>, donne presque toujours la solution.
+</div>
+
+<!-- ============================================================ -->
+<h2 id="glossaire">11. Glossaire</h2>
+<table>
+<tr><th>Terme</th><th>Définition</th></tr>
+<tr><td>API REST</td><td>Une interface web où chaque ressource (projets, tâches) a une URL et où on utilise les verbes HTTP : GET (lire), POST (créer), PUT (modifier), DELETE (supprimer).</td></tr>
+<tr><td>DTO</td><td><em>Data Transfer Object</em> : la forme exacte des données échangées en JSON, distincte des objets métier.</td></tr>
+<tr><td>Entité JPA</td><td>Classe Java liée à une table SQL.</td></tr>
+<tr><td>Port / Adaptateur</td><td>Port : interface définie par le métier. Adaptateur : son implémentation technique (ex. JPA).</td></tr>
+<tr><td>Cas d'usage</td><td>Une action que l'application sait accomplir (« créer une tâche »).</td></tr>
+<tr><td>JWT</td><td>Jeton signé prouvant l'identité de l'utilisateur, envoyé à chaque requête.</td></tr>
+<tr><td>BCrypt</td><td>Algorithme de hachage de mots de passe, volontairement lent pour résister aux attaques.</td></tr>
+<tr><td>Migration</td><td>Script SQL versionné qui fait évoluer le schéma de la base.</td></tr>
+<tr><td>SPA</td><td><em>Single Page Application</em> : une seule page HTML ; React change l'affichage sans recharger.</td></tr>
+<tr><td>CORS</td><td>Règle du navigateur qui limite les appels entre origines différentes ; évitée ici grâce au proxy nginx/Vite.</td></tr>
+<tr><td>CI/CD</td><td>Intégration continue / livraison continue : tests et build automatiques à chaque modification.</td></tr>
+<tr><td>ADR</td><td><em>Architecture Decision Record</em> : note qui explique une décision d'architecture (dans <code>docs/adr/</code>).</td></tr>
+</table>
+
+<p class="lead" style="margin-top:3rem">Pour aller plus loin : <code>docs/architecture.md</code>, <code>docs/api.md</code>, <code>docs/rbac.md</code>, <code>docs/database.md</code>, <code>docs/development.md</code> et <code>docs/adr/</code>.</p>
+
+</main>
+</div>
+</body>
+</html>
